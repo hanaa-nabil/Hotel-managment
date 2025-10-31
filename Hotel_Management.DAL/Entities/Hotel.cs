@@ -14,6 +14,7 @@ namespace Hotel_Management.DAL.Entities
         public string City { get; set; }
         public string Country { get; set; }
         public int Stars { get; set; }
-        public ICollection<Room> Rooms { get; set; }
+        public virtual ICollection<Room> Rooms { get; set; }
+
     }
 }

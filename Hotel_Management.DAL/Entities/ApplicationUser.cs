@@ -12,5 +12,6 @@ namespace Hotel_Management.DAL.Entities
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public virtual ICollection<Booking> Bookings { get; set; }
     }
 }

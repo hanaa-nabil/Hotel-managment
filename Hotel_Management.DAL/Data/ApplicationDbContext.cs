@@ -1,4 +1,5 @@
 ﻿using Hotel_Management.DAL.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -31,6 +32,50 @@ namespace Hotel_Management.DAL.Data
                 .IsUnique();
 
             SeedData(builder);
+            builder.Entity<IdentityRole>().HasData(
+       new IdentityRole
+       {
+           Id = "1",
+           Name = "Admin",
+           NormalizedName = "ADMIN",
+           ConcurrencyStamp = Guid.NewGuid().ToString()
+       },
+       new IdentityRole
+       {
+           Id = "2",
+           Name = "User",
+           NormalizedName = "USER",
+           ConcurrencyStamp = Guid.NewGuid().ToString()
+       }
+   );
+
+            // Seed Admin User
+            var hasher = new PasswordHasher<ApplicationUser>();
+            var adminUser = new ApplicationUser
+            {
+                Id = "admin-user-id",
+                UserName = "admin@hotel.com",
+                NormalizedUserName = "ADMIN@HOTEL.COM",
+                Email = "admin@hotel.com",
+                NormalizedEmail = "ADMIN@HOTEL.COM",
+                EmailConfirmed = true,
+                FirstName = "Admin",
+                LastName = "User",
+                CreatedAt = DateTime.UtcNow,
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            adminUser.PasswordHash = hasher.HashPassword(adminUser, "Admin@123");
+
+            builder.Entity<ApplicationUser>().HasData(adminUser);
+
+            // Assign Admin Role to Admin User
+            builder.Entity<IdentityUserRole<string>>().HasData(
+                new IdentityUserRole<string>
+                {
+                    RoleId = "1",
+                    UserId = "admin-user-id"
+                }
+            );
         }
         private static void SeedData(ModelBuilder builder)
         {

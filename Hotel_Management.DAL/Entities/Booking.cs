@@ -16,9 +16,7 @@ namespace Hotel_Management.DAL.Entities
         public DateTime CheckOut { get; set; }
         public decimal TotalPrice { get; set; }
         public string Status { get; set; }
-        [JsonIgnore]
-        public Room Room { get; set; }
-        [JsonIgnore]
-        public ApplicationUser User { get; set; }
+        public virtual ApplicationUser User { get; set; }
+        public virtual Room Room { get; set; }
     }
 }

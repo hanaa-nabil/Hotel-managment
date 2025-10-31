@@ -4,6 +4,7 @@ using Hotel_Management.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hotel_Management.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031191111_addroles")]
+    partial class addroles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -102,8 +105,8 @@ namespace Hotel_Management.DAL.Migrations
                         {
                             Id = "admin-user-id",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "4e6e8bf7-80c5-4322-a24c-935c1efb6b1a",
-                            CreatedAt = new DateTime(2025, 10, 31, 21, 1, 12, 182, DateTimeKind.Utc).AddTicks(2300),
+                            ConcurrencyStamp = "3e7ee7fb-e28a-4790-8be3-211b7117d1ae",
+                            CreatedAt = new DateTime(2025, 10, 31, 19, 11, 5, 406, DateTimeKind.Utc).AddTicks(8948),
                             Email = "admin@hotel.com",
                             EmailConfirmed = true,
                             FirstName = "Admin",
@@ -111,9 +114,9 @@ namespace Hotel_Management.DAL.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@HOTEL.COM",
                             NormalizedUserName = "ADMIN@HOTEL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEEhaBTdrJ/uaZErPytdJYLkEDoexBcXIObnTSVW0KIDGZl7Bm0X/ShV0UZlWkxNMPg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEFm1OrUXkUBrtQxzKej3LDIlZZzgY8Y0a/QZJBR6PP2AfRjtKg0but9U6K5FQn+HwQ==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "48715927-fb43-49bb-9d32-610c708f8654",
+                            SecurityStamp = "ab514a0b-7eda-4ef4-84e9-2349765891a2",
                             TwoFactorEnabled = false,
                             UserName = "admin@hotel.com"
                         });
@@ -386,14 +389,14 @@ namespace Hotel_Management.DAL.Migrations
                         new
                         {
                             Id = "1",
-                            ConcurrencyStamp = "99b4010f-3223-4842-9a99-4313db803cc7",
+                            ConcurrencyStamp = "3d65c921-651b-45e3-964a-13bf14123dd7",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
                             Id = "2",
-                            ConcurrencyStamp = "f1b55dd1-3000-4648-b99e-11c1d06db897",
+                            ConcurrencyStamp = "edc972c8-a79d-4f4d-ae19-07e36aab79d8",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -515,13 +518,13 @@ namespace Hotel_Management.DAL.Migrations
             modelBuilder.Entity("Hotel_Management.DAL.Entities.Booking", b =>
                 {
                     b.HasOne("Hotel_Management.DAL.Entities.Room", "Room")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Hotel_Management.DAL.Entities.ApplicationUser", "User")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -593,19 +596,9 @@ namespace Hotel_Management.DAL.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Hotel_Management.DAL.Entities.ApplicationUser", b =>
-                {
-                    b.Navigation("Bookings");
-                });
-
             modelBuilder.Entity("Hotel_Management.DAL.Entities.Hotel", b =>
                 {
                     b.Navigation("Rooms");
-                });
-
-            modelBuilder.Entity("Hotel_Management.DAL.Entities.Room", b =>
-                {
-                    b.Navigation("Bookings");
                 });
 #pragma warning restore 612, 618
         }

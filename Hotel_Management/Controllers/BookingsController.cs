@@ -20,6 +20,7 @@ namespace Hotel_Management.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll()
         {
             var bookings = await _bookingService.GetAllBookingsAsync();

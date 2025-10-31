@@ -22,10 +22,12 @@ namespace Hotel_Management.BLL.Services
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+
         public AuthService(
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext context,
-            IConfiguration configuration, IEmailService emailService)
+            IConfiguration configuration,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _context = context;
@@ -44,7 +46,8 @@ namespace Hotel_Management.BLL.Services
                 Email = model.Email,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
-                PhoneNumber = model.PhoneNumber
+                PhoneNumber = model.PhoneNumber,
+                CreatedAt = DateTime.UtcNow
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -56,6 +59,9 @@ namespace Hotel_Management.BLL.Services
                     Message = string.Join(", ", result.Errors.Select(e => e.Description))
                 };
 
+            // Assign default "User" role
+            await _userManager.AddToRoleAsync(user, "User");
+
             await GenerateAndSendOtpAsync(user);
 
             return new AuthResponseDTO
@@ -66,10 +72,6 @@ namespace Hotel_Management.BLL.Services
                 Email = user.Email
             };
         }
-
-
-
-
 
         public async Task<AuthResponseDTO> LoginAsync(LoginDTO model)
         {
@@ -92,8 +94,6 @@ namespace Hotel_Management.BLL.Services
             };
         }
 
-
-
         public async Task<AuthResponseDTO> VerifyOtpAsync(VerifyOtpDTO model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
@@ -114,7 +114,11 @@ namespace Hotel_Management.BLL.Services
             otpCode.IsUsed = true;
             await _context.SaveChangesAsync();
 
-            var token = GenerateJwtToken(user);
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Generate token with roles
+            var token = await GenerateJwtTokenAsync(user);
 
             return new AuthResponseDTO
             {
@@ -122,13 +126,13 @@ namespace Hotel_Management.BLL.Services
                 Message = "Login successful",
                 Token = token,
                 Email = user.Email,
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Roles = roles.ToList(),
                 RequiresOtp = false
             };
         }
-
-
-
-
 
         public async Task<bool> ResendOtpAsync(string email)
         {
@@ -138,11 +142,6 @@ namespace Hotel_Management.BLL.Services
             await GenerateAndSendOtpAsync(user);
             return true;
         }
-
-
-
-
-
 
         private async Task GenerateAndSendOtpAsync(ApplicationUser user)
         {
@@ -160,7 +159,8 @@ namespace Hotel_Management.BLL.Services
 
             _context.OtpCodes.Add(otpCode);
             await _context.SaveChangesAsync();
-            //Send OTP via email
+
+            // Send OTP via email
             try
             {
                 await _emailService.SendOtpEmailAsync(user.Email, otp);
@@ -174,16 +174,25 @@ namespace Hotel_Management.BLL.Services
             }
         }
 
-        private string GenerateJwtToken(ApplicationUser user)
+        private async Task<string> GenerateJwtTokenAsync(ApplicationUser user)
         {
-            var claims = new[]
-            {
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
 
+            var claims = new List<Claim>
+            {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
             };
+
+            // Add role claims
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

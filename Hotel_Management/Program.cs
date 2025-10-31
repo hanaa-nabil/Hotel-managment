@@ -73,7 +73,8 @@ namespace Hotel_Management
             builder.Services.AddScoped<IRoomService, RoomService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+
 
 
             builder.Services.AddControllers();

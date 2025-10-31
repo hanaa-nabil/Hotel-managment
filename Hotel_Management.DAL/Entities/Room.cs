@@ -15,7 +15,7 @@ namespace Hotel_Management.DAL.Entities
         public string Type { get; set; }
         public decimal PricePerNight { get; set; }
         public bool IsAvailable { get; set; }
-        [JsonIgnore]
-        public Hotel Hotel { get; set; }
+        public virtual Hotel Hotel { get; set; }
+        public virtual ICollection<Booking> Bookings { get; set; }
     }
 }
