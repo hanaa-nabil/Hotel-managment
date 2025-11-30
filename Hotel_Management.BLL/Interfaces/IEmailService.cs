@@ -9,5 +9,6 @@ namespace Hotel_Management.BLL.Interfaces
     public interface IEmailService
     {
         Task SendOtpEmailAsync(string toEmail, string otp);
+        Task SendPasswordResetOtpAsync(string toEmail, string otp);
     }
 }

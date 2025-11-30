@@ -9,7 +9,6 @@ namespace Hotel_Management.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-
         private readonly IAuthService _authService;
 
         public AuthController(IAuthService authService)
@@ -60,14 +59,47 @@ namespace Hotel_Management.Api.Controllers
         }
 
         [HttpPost("resend-otp")]
-        public async Task<IActionResult> ResendOtp([FromBody] string email)
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request)
         {
-            var result = await _authService.ResendOtpAsync(email);
+            if (string.IsNullOrEmpty(request?.Email))
+                return BadRequest("Email is required");
+
+            var result = await _authService.ResendOtpAsync(request.Email);
 
             if (!result)
-                return BadRequest("Failed to resend OTP");
+                return BadRequest(new { Success = false, Message = "Failed to resend OTP" });
 
-            return Ok("OTP sent successfully");
+            return Ok(new { Success = true, Message = "OTP sent successfully" });
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ForgotPasswordAsync(model);
+
+            return Ok(result);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ResetPasswordAsync(model);
+
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+    }
+
+    public class ResendOtpRequest
+    {
+        public string Email { get; set; }
     }
 }

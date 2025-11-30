@@ -12,7 +12,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
 
 namespace Hotel_Management.BLL.Services
 {
@@ -47,6 +46,7 @@ namespace Hotel_Management.BLL.Services
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 PhoneNumber = model.PhoneNumber,
+                EmailConfirmed = false, // Email not confirmed yet
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -62,12 +62,13 @@ namespace Hotel_Management.BLL.Services
             // Assign default "User" role
             await _userManager.AddToRoleAsync(user, "User");
 
-            await GenerateAndSendOtpAsync(user);
+            // Send OTP for email verification only on registration
+            await GenerateAndSendOtpAsync(user, "verification");
 
             return new AuthResponseDTO
             {
                 Success = true,
-                Message = "Registration successful. OTP sent to email.",
+                Message = "Registration successful. Please verify your email with the OTP sent.",
                 RequiresOtp = true,
                 Email = user.Email
             };
@@ -83,14 +84,33 @@ namespace Hotel_Management.BLL.Services
             if (!result)
                 return new AuthResponseDTO { Success = false, Message = "Invalid credentials" };
 
-            await GenerateAndSendOtpAsync(user);
+            // Check if email is verified
+            if (!user.EmailConfirmed)
+                return new AuthResponseDTO
+                {
+                    Success = false,
+                    Message = "Please verify your email before logging in. Check your email for OTP.",
+                    RequiresOtp = true,
+                    Email = user.Email
+                };
+
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Generate token with roles - no OTP needed for login after email is verified
+            var token = await GenerateJwtTokenAsync(user);
 
             return new AuthResponseDTO
             {
                 Success = true,
-                Message = "OTP sent to email",
-                RequiresOtp = true,
-                Email = user.Email
+                Message = "Login successful",
+                Token = token,
+                Email = user.Email,
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Roles = roles.ToList(),
+                RequiresOtp = false
             };
         }
 
@@ -114,6 +134,13 @@ namespace Hotel_Management.BLL.Services
             otpCode.IsUsed = true;
             await _context.SaveChangesAsync();
 
+            // Mark email as confirmed
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await _userManager.UpdateAsync(user);
+            }
+
             // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
 
@@ -123,7 +150,7 @@ namespace Hotel_Management.BLL.Services
             return new AuthResponseDTO
             {
                 Success = true,
-                Message = "Login successful",
+                Message = "Email verified successfully. You can now login.",
                 Token = token,
                 Email = user.Email,
                 UserId = user.Id,
@@ -139,14 +166,86 @@ namespace Hotel_Management.BLL.Services
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return false;
 
-            await GenerateAndSendOtpAsync(user);
+            await GenerateAndSendOtpAsync(user, "verification");
             return true;
         }
 
-        private async Task GenerateAndSendOtpAsync(ApplicationUser user)
+        public async Task<AuthResponseDTO> ForgotPasswordAsync(ForgotPasswordDTO model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                // Don't reveal that the user doesn't exist
+                return new AuthResponseDTO
+                {
+                    Success = true,
+                    Message = "If an account exists with this email, a password reset OTP has been sent."
+                };
+
+            if (!user.EmailConfirmed)
+                return new AuthResponseDTO
+                {
+                    Success = false,
+                    Message = "Please verify your email first before resetting password."
+                };
+
+            await GenerateAndSendOtpAsync(user, "password-reset");
+
+            return new AuthResponseDTO
+            {
+                Success = true,
+                Message = "Password reset OTP sent to your email.",
+                RequiresOtp = true,
+                Email = user.Email
+            };
+        }
+
+        public async Task<AuthResponseDTO> ResetPasswordAsync(ResetPasswordDTO model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return new AuthResponseDTO { Success = false, Message = "User not found" };
+
+            if (model.NewPassword != model.ConfirmPassword)
+                return new AuthResponseDTO { Success = false, Message = "Passwords do not match" };
+
+            // Verify OTP
+            var otpCode = _context.OtpCodes
+                .Where(o => o.UserId == user.Id && o.Code == model.Otp && !o.IsUsed)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefault();
+
+            if (otpCode == null)
+                return new AuthResponseDTO { Success = false, Message = "Invalid OTP" };
+
+            if (otpCode.ExpiresAt < DateTime.UtcNow)
+                return new AuthResponseDTO { Success = false, Message = "OTP expired" };
+
+            // Mark OTP as used
+            otpCode.IsUsed = true;
+            await _context.SaveChangesAsync();
+
+            // Reset password
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (!result.Succeeded)
+                return new AuthResponseDTO
+                {
+                    Success = false,
+                    Message = string.Join(", ", result.Errors.Select(e => e.Description))
+                };
+
+            return new AuthResponseDTO
+            {
+                Success = true,
+                Message = "Password reset successful. You can now login with your new password."
+            };
+        }
+
+        private async Task GenerateAndSendOtpAsync(ApplicationUser user, string purpose)
         {
             var random = new Random();
-            var otp = random.Next(1000, 9999).ToString();
+            var otp = random.Next(100000, 999999).ToString();
 
             var otpCode = new OtpCode
             {
@@ -160,10 +259,17 @@ namespace Hotel_Management.BLL.Services
             _context.OtpCodes.Add(otpCode);
             await _context.SaveChangesAsync();
 
-            // Send OTP via email
+            // Send OTP via email based on purpose
             try
             {
-                await _emailService.SendOtpEmailAsync(user.Email, otp);
+                if (purpose == "password-reset")
+                {
+                    await _emailService.SendPasswordResetOtpAsync(user.Email, otp);
+                }
+                else
+                {
+                    await _emailService.SendOtpEmailAsync(user.Email, otp);
+                }
                 Console.WriteLine($"OTP sent successfully to {user.Email}");
             }
             catch (Exception ex)

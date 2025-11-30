@@ -13,5 +13,7 @@ namespace Hotel_Management.BLL.Interfaces
         Task<AuthResponseDTO> LoginAsync(LoginDTO model);
         Task<AuthResponseDTO> VerifyOtpAsync(VerifyOtpDTO model);
         Task<bool> ResendOtpAsync(string email);
+        Task<AuthResponseDTO> ForgotPasswordAsync(ForgotPasswordDTO model);
+        Task<AuthResponseDTO> ResetPasswordAsync(ResetPasswordDTO model);
     }
 }

@@ -1,4 +1,3 @@
-
 using Hotel_Management.BLL.Interfaces;
 using Hotel_Management.BLL.Services;
 using Hotel_Management.DAL.Data;
@@ -74,9 +73,7 @@ namespace Hotel_Management
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
-
             builder.Services.AddScoped<IPaymentService, PaymentService>();
-
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -142,8 +139,7 @@ namespace Hotel_Management
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
-
-           // app.UseHttpsRedirection();
+            app.UseDeveloperExceptionPage();
             app.UseAuthentication();
             app.UseAuthorization();
 
